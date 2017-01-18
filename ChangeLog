@@ -1,3 +1,4 @@
+	- add support for nexstar:// as a prefix
 Thu Apr  6 15:09:08 2016 - 0.15 (skipping 0.14 to catch up with NexStarCtl)
 	- added full SkyWatcher support
 	- distinguish between SkyWatcher and Celestron

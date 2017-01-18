@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 //	printf("%d:%d:%d, %d, %s\n",deg,min,sec,sign,dd2a(-22.9998,0));
 
 	//nexstar_use_rtc = 1;
-	int dev = open_telescope("/dev/ttyUSB0");
+	int dev = open_telescope("tcp://localhost:2000");
 	printf("dev = %d\n", dev);
 
 //	enforce_protocol_version(dev,VER_4_37_8);
