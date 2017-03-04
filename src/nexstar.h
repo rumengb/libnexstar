@@ -1,7 +1,7 @@
 /**************************************************************
 	Celestron NexStar compatible telescope control library
 	
-	(C)2013-2016 by Rumen G.Bogdanovski
+	(C)2013-2017 by Rumen G.Bogdanovski
 ***************************************************************/
 #if !defined(__NEXSTAR_H)
 #define __NEXSTAR_H
@@ -48,6 +48,7 @@
 #define RC_DEVICE      (-3)	/* no responce from the device */
 #define RC_DATA        (-4)	/* invalid data */
 #define RC_UNSUPPORTED (-5) /* Unsupported command */
+#define RC_UNCERTAIN   (-6) /* Alignment may be poor */
 
 #define DEG2RAD (3.1415926535897932384626433832795/180.0)
 #define RAD2DEG (180.0/3.1415926535897932384626433832795)
@@ -61,6 +62,7 @@
 #define VER_4_10 0x40A00
 #define VER_3_37_8 0x32508
 #define VER_4_37_8 0x42508
+#define VER_4_39_5 0x42705
 /* All protocol versions */
 #define VER_AUX  0xFFFFFF
 #define VER_AUTO 0x0
@@ -170,6 +172,10 @@ int tc_set_backlash(int dev, char axis, char direction, char backlash);
 int tc_pass_through_cmd(int dev, char msg_len, char dest_id, char cmd_id,
                         char data1, char data2, char data3, char res_len, char *response);
 /* End of reverse engineered commands */
+
+/* alignment commands (Skywatcher specific) */
+int tc_set_alignment_point(int dev, int point_num, double ra, double de);
+int tc_align(int dev, int num_points);
 
 /* nextar turns <=> degrees conversion */
 int pnex2dd(char *nex, double *d1, double *d2);

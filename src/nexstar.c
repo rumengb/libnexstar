@@ -863,6 +863,54 @@ int tc_pass_through_cmd(int dev, char msg_len, char dest_id, char cmd_id,
 	return RC_OK;
 }
 
+/*****************************************
+ Alignent: SKYWATCHER ONLY
+ *****************************************/
+int tc_set_alignment_point(int dev, int point_num, double ra, double de) {
+	const char numc[3] = {'1','2','3'};
+	char nex[30];
+	char reply;
+
+	REQUIRE_VENDOR(VNDR_SKYWATCHER);
+	REQUIRE_VER(VER_4_39_5);
+
+	if ((point_num < 1) || (point_num > 3)) return RC_PARAMS;
+	if ((ra < -0.1) || (ra > 360.1)) return RC_PARAMS;
+	if ((de < -90.1) || (de > 90.1)) return RC_PARAMS;
+
+	nex[0] = 'a';
+	nex[1] = numc[point_num];
+	dd2pnex(ra, de, nex + 2);
+	if (write_telescope(dev, nex, 19) < 1) return RC_FAILED;
+
+	if (read_telescope(dev, &reply, sizeof reply) < 0) return RC_FAILED;
+
+	return RC_OK;
+}
+
+int tc_align(int dev, int num_points) {
+	const char numc[3] = {'1','2','3'};
+	char cmd[2];
+	char reply[2];
+
+	REQUIRE_VENDOR(VNDR_SKYWATCHER);
+	REQUIRE_VER(VER_4_39_5);
+
+	if ((num_points < 1) || (num_points > 3)) return RC_PARAMS;
+
+	cmd[0] = 'A';
+	cmd[1] = numc[num_points];
+
+	if (write_telescope(dev, cmd, 2) < 2) return RC_FAILED;
+
+	if (read_telescope(dev, reply, sizeof reply) < 0) return RC_FAILED;
+
+	if (reply[0]=='1') return 1;
+	if (reply[0]=='0') return 0;
+	if (reply[0]=='?') return 2;
+
+	return RC_FAILED;
+}
 
 /******************************************
  conversion:	nexstar <-> decimal degrees
