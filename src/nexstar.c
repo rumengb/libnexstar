@@ -112,6 +112,12 @@ int guess_mount_vendor(int dev) {
 	return RC_FAILED;
 }
 
+int get_mount_capabilities(int dev, uint32_t *caps) {
+	/* still dumy TBD */
+	*caps = 0xffff;
+	return 0;
+}
+
 int enforce_vendor_protocol(int vendor) {
 
 	if (!(vendor & VNDR_ALL_SUPPORTED)) return RC_FAILED;

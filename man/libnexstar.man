@@ -116,6 +116,9 @@ On success the guessed vendor ID is returned (VNDR_CELESTRON or VNDR_SKYWATCHER)
 
 NOTE: SkyWather mounts with firmware before 4.37.8 will be threated as Celestron in this case enforce_vendor_protocol() can be used.
 .TP
+.B int get_mount_capabilities(int dev, uint32_t *caps);
+TBD.
+.TP
 .B int enforce_vendor_protocol(int vendor);
 This function enforces protocol of the specified vendor to be used overriding the guessed one.
 Valid vendor IDs are VNDR_CELESTRON and VNDR_SKYWATCHER. This way the commands not supported
