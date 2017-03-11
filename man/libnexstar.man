@@ -116,8 +116,19 @@ On success the guessed vendor ID is returned (VNDR_CELESTRON or VNDR_SKYWATCHER)
 
 NOTE: SkyWather mounts with firmware before 4.37.8 will be threated as Celestron in this case enforce_vendor_protocol() can be used.
 .TP
-.B int get_mount_capabilities(int dev, uint32_t *caps);
-TBD.
+.B int get_mount_capabilities(int dev, uint32_t *caps, int *vendor);
+This function returns mount capabilities in
+.B *caps
+as a bitmap of the following capabilities CAN_SYNC, CAN_GET_SET_BACKLASH, CAN_GET_SET_GUIDE_RATE, CAN_SLEW, CAN_GET_ORIENTATION, CAN_ALIGN, CAN_GET_SET_PEC.
+If the corresponding bit is set then this capability is supported.
+.B *vendor
+is used as a hint so that the vendor is not guessed, but the one provided is used to determine mount capabilitiies. If
+.B *vendor
+is 0, the vendor is guessed and
+.B *vendor
+is set to it on exit. If
+.B vendor
+is NULL the vendor is guessed but not returned. On success the finction returns 0, on error -1.
 .TP
 .B int enforce_vendor_protocol(int vendor);
 This function enforces protocol of the specified vendor to be used overriding the guessed one.

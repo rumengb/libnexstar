@@ -112,14 +112,67 @@ int guess_mount_vendor(int dev) {
 	return RC_FAILED;
 }
 
-int get_mount_capabilities(int dev, uint32_t *caps) {
-	/* still dumy TBD */
-	*caps = 0xffff;
-	return 0;
+int get_mount_capabilities(int dev, uint32_t *caps, int *vendor) {
+	int guessed_vendor;
+	int firmware_version;
+
+	if (caps) {
+		*caps = 0;
+	} else {
+		return RC_FAILED;
+	}
+
+	if (vendor == NULL) {
+		guessed_vendor = guess_mount_vendor(dev);
+	} else if (*vendor == 0) {
+		guessed_vendor = guess_mount_vendor(dev);
+		*vendor = guessed_vendor;
+	} else {
+		guessed_vendor = *vendor;
+	}
+
+	firmware_version = tc_get_version(dev, NULL, NULL);
+
+	if ((guessed_vendor < 0) || (firmware_version < 0)) return RC_FAILED;
+
+	if ((guessed_vendor == VNDR_SKYWATCHER) && (GET_RELEASE(firmware_version) >= 37) && (GET_REVISION(firmware_version) >= 3)) {
+		*caps |= CAN_SYNC;
+	} else if (firmware_version >= VER_4_10) {
+		*caps |= CAN_SYNC;
+	}
+
+	if ((guessed_vendor == VNDR_CELESTRON) && (firmware_version >= VER_3_1)) {
+		/* Not sure about this but recent mounts will work so 3.1 is fair */
+		*caps |= CAN_GET_SET_BACKLASH;
+	}
+
+	if (firmware_version >= VER_3_1) {
+		/* Not sure about this but recent mounts will work so 3.1 is fair */
+		*caps |= CAN_GET_SET_GUIDE_RATE;
+	}
+
+	if ((guessed_vendor == VNDR_SKYWATCHER) && (GET_RELEASE(firmware_version) >= 3)) {
+		*caps |= CAN_SLEW;
+	} else if (firmware_version >= VER_1_6) {
+		*caps |= CAN_SLEW;
+	}
+
+	if ((guessed_vendor == VNDR_SKYWATCHER) && (GET_RELEASE(firmware_version) >= 37) && (GET_REVISION(firmware_version) >= 3)) {
+		*caps |= CAN_GET_ORIENTATION;
+	}
+
+	if ((guessed_vendor == VNDR_SKYWATCHER) && (GET_RELEASE(firmware_version) >= 39) && (GET_REVISION(firmware_version) >= 5)) {
+		*caps |= CAN_ALIGN;
+	}
+
+	if ((guessed_vendor == VNDR_CELESTRON) && (firmware_version >= VER_4_10)) {
+		/* Not sure about this but recent mounts will work so 4.10 is fair */
+		*caps |= CAN_GET_SET_PEC;
+	}
+	return RC_OK;
 }
 
 int enforce_vendor_protocol(int vendor) {
-
 	if (!(vendor & VNDR_ALL_SUPPORTED)) return RC_FAILED;
 	nexstar_mount_vendor = vendor;
 	return vendor;
@@ -220,8 +273,8 @@ int _tc_sync_rade(int dev, double ra, double de, char precise) {
 	char reply;
 
 	if (VENDOR(VNDR_SKYWATCHER)) {
-		REQUIRE_RELEASE(3);
-		REQUIRE_REVISION(37);
+		REQUIRE_RELEASE(37);
+		REQUIRE_REVISION(3);
 	} else {
 		REQUIRE_VER(VER_4_10);
 	}
@@ -260,8 +313,8 @@ int tc_get_orientation(int dev) {
 	char reply[2];
 
 	REQUIRE_VENDOR(VNDR_SKYWATCHER);
-	REQUIRE_RELEASE(3);
-	REQUIRE_REVISION(37);
+	REQUIRE_RELEASE(37);
+	REQUIRE_REVISION(3);
 
 	if (write_telescope(dev, "p", 1) < 1) return RC_FAILED;
 

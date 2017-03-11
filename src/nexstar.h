@@ -44,10 +44,11 @@
 /* Capabilities */
 #define CAN_SYNC               0x0001
 #define CAN_GET_SET_BACKLASH   0x0002
-#define CAN_SET_GET_GUIDE_RATE 0x0004
+#define CAN_GET_SET_GUIDE_RATE 0x0004
 #define CAN_SLEW               0x0008
-#define CAN_GET_ORIANTATION    0x000F
+#define CAN_GET_ORIENTATION    0x000F
 #define CAN_ALIGN              0x0010
+#define CAN_GET_SET_PEC        0x0020
 
 /* return codes */
 #define RC_OK            0	/* success */
@@ -124,7 +125,7 @@ int _read_telescope(int devfd, char *reply, int len, char vl);
 #define read_telescope_vl(devfd, reply, len) (_read_telescope(devfd, reply, len, 1))
 
 int guess_mount_vendor(int dev);
-int get_mount_capabilities(int dev, uint32_t *caps);
+int get_mount_capabilities(int dev, uint32_t *caps, int *vendor);
 int enforce_vendor_protocol(int vendor);
 
 /* Telescope commands */
