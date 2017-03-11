@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 //	printf("%d:%d:%d, %d, %s\n",deg,min,sec,sign,dd2a(-22.9998,0));
 
 	//nexstar_use_rtc = 1;
-	int dev = open_telescope("tcp://localhost:2000");
+	int dev = open_telescope("/dev/ttyUSB0");
 	printf("dev = %d\n", dev);
 
 //	enforce_protocol_version(dev,VER_4_37_8);
@@ -80,6 +80,25 @@ int main(int argc, char *argv[]) {
 	time(&tm);
 	printf("tc_set_time() = %d\n",tc_set_time(dev, tm, 2, 0));
 
+	int res = tc_check_align(dev);
+	printf("tc_check_align() = %d\n", res);
+
+	res = tc_goto_rade_p(dev, 23.00, 80.01);
+	printf("tc_goto_rade_p(23.00, 80.01) = %d\n", res);
+
+	while (tc_goto_in_progress(dev)>0) {
+		sleep(1);
+	}
+
+	res = tc_set_alignment_point(dev, 1, 23.00, 80.00);
+	printf("tc_set_alignment_point(1, 23.00, 80.00) = %d\n", res);
+
+	tc_align(dev, 1);
+	printf("tc_align(1) = %d\n", res);
+	
+	res = tc_check_align(dev);
+	printf("tc_check_align() = %d\n", res);
+
 /*
 	printf("%s %s\n",argv[1], argv[2]);
 	
@@ -114,7 +133,7 @@ int main(int argc, char *argv[]) {
 	int dst;
 	tc_get_time(dev, &ttime, &tz, &dst);
 	
-	printf("time = %s, tz = %d, dst = %d\n", ctime(&ttime), tz, dst);   
+	printf("time = %s", ctime(&ttime));   
 	
 	/*
 	res = tc_goto_rade(dev, ra-0.5, de-.5);
