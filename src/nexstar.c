@@ -73,8 +73,8 @@ int _read_telescope(int devfd, char *reply, int len, char fl) {
 		if (res == 1) {
 			reply[count] = c;
 			count++;
+			//printf("HC: %c, %d C:%d\n", (unsigned char)reply[count-1], (unsigned char)reply[count-1], count);
 			if ((fl) && (c == '#')) return count;
-			//printf("R: %d, C:%d\n", (unsigned char)reply[count-1], count);
 		} else {
 			return RC_FAILED;
 		}
@@ -938,7 +938,7 @@ int tc_set_alignment_point(int dev, int point_num, double ra, double de) {
 	if ((de < -90.1) || (de > 90.1)) return RC_PARAMS;
 
 	nex[0] = 'a';
-	nex[1] = numc[point_num];
+	nex[1] = numc[point_num-1];
 	dd2pnex(ra, de, nex + 2);
 	if (write_telescope(dev, nex, 19) < 1) return RC_FAILED;
 
@@ -958,15 +958,15 @@ int tc_align(int dev, int num_points) {
 	if ((num_points < 1) || (num_points > 3)) return RC_PARAMS;
 
 	cmd[0] = 'A';
-	cmd[1] = numc[num_points];
+	cmd[1] = numc[num_points-1];
 
 	if (write_telescope(dev, cmd, 2) < 2) return RC_FAILED;
 
 	if (read_telescope(dev, reply, sizeof reply) < 0) return RC_FAILED;
 
-	if (reply[0]=='1') return 1;
-	if (reply[0]=='0') return 0;
-	if (reply[0]=='?') return 2;
+	if (reply[0]=='1') return RC_OK;
+	if (reply[0]=='0') return RC_FAILED;
+	if (reply[0]=='?') return RC_UNCERTAIN;
 
 	return RC_FAILED;
 }

@@ -50,6 +50,9 @@ or may behave erratically.
 .B #define RC_UNSUPPORTED (-5)
 /* unsupported command */
 
+.B #define RC_UNCERTAIN (-6)
+/* Alignment may be poor */
+
 .SH CALLS
 
 .SS TELESCOPE COMMUNICATION
@@ -380,8 +383,8 @@ Perform one, two or three point alignment depending on
 .B num_points
 using the data provided by calling tc_set_alignmnt_point(). For one point alignment atleast point 1 data should be set.
 For two point aliggnment at least points 1 and 2 should be set. For three point alignment the data all three points should be set.
-If the alignment did not succeed 0 is returned. If the aligment is successful 1 is returned.
-In case the alignment is uncertain (possibly bad) 2 is returned.
+If the alignment did not succeed 0 is returned. If the aligment is successful 0 is returned.
+In case the alignment is uncertain (possibly bad) -6 is returned.
 On error -1 is returned, if
 .B num_points
 is not in the range [1,2,3] -2 is returned. If the command is not supported -5 is returned.
