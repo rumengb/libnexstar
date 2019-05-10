@@ -273,8 +273,8 @@ int _tc_sync_rade(int dev, double ra, double de, char precise) {
 	char reply;
 
 	if (VENDOR(VNDR_SKYWATCHER)) {
-		REQUIRE_RELEASE(37);
-		REQUIRE_REVISION(3);
+		REQUIRE_RELEASE(3);
+		REQUIRE_REVISION(37);
 	} else {
 		REQUIRE_VER(VER_4_10);
 	}
@@ -313,8 +313,8 @@ int tc_get_orientation(int dev) {
 	char reply[2];
 
 	REQUIRE_VENDOR(VNDR_SKYWATCHER);
-	REQUIRE_RELEASE(37);
-	REQUIRE_REVISION(3);
+	REQUIRE_RELEASE(3);
+	REQUIRE_REVISION(37);
 
 	if (write_telescope(dev, "p", 1) < 1) return RC_FAILED;
 
