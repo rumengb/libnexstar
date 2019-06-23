@@ -183,7 +183,7 @@ int enforce_vendor_protocol(int vendor) {
  *****************************************************/
 
 int _tc_get_rade(int dev, double *ra, double *de, char precise) {
-	char reply[20];
+	char reply[18];
 
 	if (precise) {
 		REQUIRE_VER(VER_1_6);
@@ -202,7 +202,7 @@ int _tc_get_rade(int dev, double *ra, double *de, char precise) {
 }
 
 int _tc_get_azalt(int dev, double *az, double *alt, char precise) {
-	char reply[20];
+	char reply[18];
 
 	if (precise) {
 		REQUIRE_VER(VER_2_2);
