@@ -145,7 +145,7 @@ ID is returned otherwise it returns -1.
 If the telescope alignment process is complete 1 is returned. If it is not complete 0 is returned.
 On error -1 is returned.
 .TP
-.B int tc_get_orientation(int dev);
+.B int tc_get_side_of_pier(int dev);
 Get the telescope orientation. Character 'E' or 'W' is returned for East and West respectively. If no response received, -1
 is returned.
 .TP

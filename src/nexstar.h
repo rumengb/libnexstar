@@ -1,7 +1,7 @@
 /**************************************************************
 	Celestron NexStar compatible telescope control library
-	
-	(C)2013-2017 by Rumen G.Bogdanovski
+
+	(C)2013-2019 by Rumen G.Bogdanovski
 ***************************************************************/
 #if !defined(__NEXSTAR_H)
 #define __NEXSTAR_H
@@ -22,10 +22,10 @@
 #define TC_TRACK_EQ_SOUTH    3
 #define TC_TRACK_EQ          4
 #define TC_TRACK_EQ_PEC      5
-	
+
 #define TC_DIR_POSITIVE 1
 #define TC_DIR_NEGATIVE 0
-	
+
 #define TC_AXIS_RA_AZM 1
 #define TC_AXIS_DE_ALT 0
 
@@ -37,7 +37,7 @@
 
 #define _TC_DIR_POSITIVE 6
 #define _TC_DIR_NEGATIVE 7
-	
+
 #define _TC_AXIS_RA_AZM 16
 #define _TC_AXIS_DE_ALT 17
 
@@ -69,12 +69,17 @@
 #define VER_2_3  0x20300
 #define VER_3_1  0x30100
 #define VER_4_10 0x40A00
+#define VER_4_15 0x40F00
 #define VER_3_37_8 0x32508
 #define VER_4_37_8 0x42508
 #define VER_4_39_5 0x42705
 /* All protocol versions */
 #define VER_AUX  0xFFFFFF
 #define VER_AUTO 0x0
+
+#define HC_UNSPECIFIED  0x00
+#define HC_NEXSTAR      0x11
+#define HC_STARSENSE    0x13
 
 #define VNDR_CELESTRON  0x1
 #define VNDR_SKYWATCHER 0x2
@@ -86,6 +91,8 @@
 extern int nexstar_use_rtc;
 
 extern int nexstar_proto_version;
+extern int nexstar_hc_type;
+
 /* version check macros */
 #define RELEASE_MASK  0xFF0000
 #define REVISION_MASK 0x00FF00
@@ -95,10 +102,10 @@ extern int nexstar_proto_version;
 #define GET_REVISION(ver) ((ver & REVISION_MASK)>>8)
 #define GET_PATCH(ver)    (ver & PATCH_MASK)
 
-#define REQUIRE_VER(req_ver)      { if(req_ver > nexstar_proto_version) return RC_UNSUPPORTED; }
-#define REQUIRE_RELEASE(req_ver)  { if ((req_ver) > GET_RELEASE(nexstar_proto_version)) return RC_UNSUPPORTED; }
-#define REQUIRE_REVISION(req_ver) { if ((req_ver) > GET_REVISION(nexstar_proto_version)) return RC_UNSUPPORTED; }
-#define REQUIRE_PATCH(req_ver)    { if ((req_ver) > GET_PATCH(nexstar_proto_version)) return RC_UNSUPPORTED; }
+#define REQUIRE_VER(req_ver)      { if (nexstar_hc_type != HC_STARSENSE && req_ver > nexstar_proto_version) return RC_UNSUPPORTED; }
+#define REQUIRE_RELEASE(req_ver)  { if (nexstar_hc_type != HC_STARSENSE && (req_ver) > GET_RELEASE(nexstar_proto_version)) return RC_UNSUPPORTED; }
+#define REQUIRE_REVISION(req_ver) { if (nexstar_hc_type != HC_STARSENSE && (req_ver) > GET_REVISION(nexstar_proto_version)) return RC_UNSUPPORTED; }
+#define REQUIRE_PATCH(req_ver)    { if (nexstar_hc_type != HC_STARSENSE && (req_ver) > GET_PATCH(nexstar_proto_version)) return RC_UNSUPPORTED; }
 
 extern int nexstar_mount_vendor;
 /* vendor check macros */
@@ -118,7 +125,11 @@ extern "C" {
 int open_telescope(char *dev_file);
 int close_telescope(int dev_fd);
 int enforce_protocol_version(int devfd, int ver);
-#define write_telescope(dev_fd, buf, size) (write(dev_fd, buf, size))
+
+extern void (*tc_debug)(const char *format, ...);
+
+int _write_telescope(int devfd, char *buf, int size);
+#define write_telescope(dev_fd, buf, size) (_write_telescope(dev_fd, buf, size))
 
 int _read_telescope(int devfd, char *reply, int len, char vl);
 #define read_telescope(devfd, reply, len) (_read_telescope(devfd, reply, len, 0))
@@ -130,7 +141,7 @@ int enforce_vendor_protocol(int vendor);
 
 /* Telescope commands */
 int tc_check_align(int dev);
-int tc_get_orientation(int dev);
+int tc_get_side_of_pier(int dev);
 int tc_goto_in_progress(int dev);
 int tc_goto_cancel(int dev);
 int tc_echo(int dev, char ch);

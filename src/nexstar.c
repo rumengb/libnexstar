@@ -16,11 +16,23 @@
 
 /* do not check protocol version by default */
 int nexstar_proto_version = VER_AUX;
-
+int nexstar_hc_type = HC_UNSPECIFIED;
 int nexstar_mount_vendor = VNDR_ALL_SUPPORTED;
 
 /* do not use RTC by default */
 int nexstar_use_rtc = 0;
+
+void (*tc_debug)(const char *format, ...) = NULL;
+
+static void debug(char *msg, char *buf, int size) {
+	if (tc_debug) {
+		static char line[1024];
+		char *end = line + sprintf(line, "libnexstar: %s", msg);
+		for (int i = 0; i < size; i++)
+			end += sprintf(end, " %02x", buf[i] & 0xFF);
+		tc_debug(line);
+	}
+}
 
 /*****************************************************
  Telescope communication
@@ -36,10 +48,14 @@ int open_telescope(char *dev_file) {
 		/* should be tty port */
 		dev_fd = open_telescope_rs(dev_file);
 	}
-	if (dev_fd < 0) return dev_fd;
+	if (dev_fd < 0) {
+		debug("open FAILED", NULL, 0);
+		return dev_fd;
+	}
 
 	nexstar_mount_vendor = guess_mount_vendor(dev_fd);
 	if(nexstar_mount_vendor < 0) {
+		debug("detection FAILED", NULL, 0);
 		close_telescope(dev_fd);
 		return RC_FAILED;
 	}
@@ -48,6 +64,7 @@ int open_telescope(char *dev_file) {
 }
 
 int close_telescope(int devfd) {
+	debug("close", NULL, 0);
 	return close(devfd);
 }
 
@@ -64,32 +81,44 @@ int enforce_protocol_version(int devfd, int ver) {
 	return RC_OK;
 }
 
-int _read_telescope(int devfd, char *reply, int len, char fl) {
-	char c;
-	int res;
-	int count=0;
+int _write_telescope(int devfd, char *buf, int size) {
+	int result = (int)write(devfd, buf, size);
+	debug("write", buf, size);
+	return result;
+}
 
-	while ((count < len) && ((res=read(devfd,&c,1)) != -1 )) {
+int _read_telescope(int devfd, char *reply, int len, char fl) {
+	char c = 0;
+	int res;
+	int count = 0;
+
+	while ((count < len) && ((res = (int)read(devfd, &c, 1)) != -1 )) {
 		if (res == 1) {
 			reply[count] = c;
 			count++;
-			//printf("HC: %c, %d C:%d\n", (unsigned char)reply[count-1], (unsigned char)reply[count-1], count);
-			if ((fl) && (c == '#')) return count;
+			if ((fl) && (c == '#')) {
+				debug("read", reply, count);
+				return count;
+			}
 		} else {
+			debug("read FAILED", reply, count);
 			return RC_FAILED;
 		}
 	}
 	if (c == '#') {
+		debug("read", reply, count);
 		return count;
 	} else {
 		/* if the last byte is not '#', this means that the device did
 		   not respond and the next byte should be '#' (hopefully) */
-		res=read(devfd,&c,1);
+		res = (int)read(devfd,&c,1);
 		if ((res == 1) && (c == '#')) {
 			//printf("%s(): RC_DEVICE\n",__FUNCTION__);
+			debug("read FAILED", reply, count);
 			return RC_DEVICE;
 		}
 	}
+	debug("read FAILED", reply, count);
 	return RC_FAILED;
 }
 
@@ -309,12 +338,15 @@ int tc_check_align(int dev) {
 	return reply[0];
 }
 
-int tc_get_orientation(int dev) {
+int tc_get_side_of_pier(int dev) {
 	char reply[2];
 
-	REQUIRE_VENDOR(VNDR_SKYWATCHER);
-	REQUIRE_RELEASE(3);
-	REQUIRE_REVISION(37);
+	if (VENDOR(VNDR_SKYWATCHER)) {
+		REQUIRE_RELEASE(3);
+		REQUIRE_REVISION(37);
+	} else {
+		REQUIRE_VER(VER_4_15);
+	}
 
 	if (write_telescope(dev, "p", 1) < 1) return RC_FAILED;
 
@@ -392,7 +424,12 @@ int tc_get_version(int dev, char *major, char *minor) {
 	if (res == 3) { /* Celestron */
 		if (major) *major = reply[0];
 		if (minor) *minor = reply[1];
-		return ((reply[0] << 16) + (reply[1] << 8));
+		int result = ((reply[0] << 16) + (reply[1] << 8));
+		nexstar_hc_type = HC_NEXSTAR;
+		if (write_telescope(dev, "v", 1) == 1 && read_telescope_vl(dev, reply, sizeof reply) == 2) {
+			nexstar_hc_type = reply[0];
+		}
+		return result;
 	} else if (res == 7) { /* SkyWatcher */
 		long maj, min, subv;
 		reply[6] = '\0';
@@ -403,19 +440,19 @@ int tc_get_version(int dev, char *major, char *minor) {
 		maj = strtol(reply, NULL, 16);
 		if (major) *major = maj;
 		if (minor) *minor = min;
-		return ((maj << 16) + (min << 8) + subv);
+		return (int)((maj << 16) + (min << 8) + subv);
 	}
 	return RC_FAILED;
 }
 
 int tc_get_tracking_mode(int dev) {
-	char reply[2];
+	char reply[8];
 
 	REQUIRE_VER(VER_2_3);
 
 	if (write_telescope(dev, "t", 1) < 1) return RC_FAILED;
 
-	if (read_telescope(dev, reply, sizeof reply) < 0) return RC_FAILED;
+	if (read_telescope_vl(dev, reply, sizeof reply) < 0) return RC_FAILED;
 	if (VENDOR_IS(VNDR_SKYWATCHER)) {
 		switch (reply[0]) {
 			case SW_TC_TRACK_OFF:      return TC_TRACK_OFF;
@@ -606,7 +643,7 @@ int tc_set_location(int dev, double lon, double lat) {
 	cmd[7] = sec;
 	cmd[8] = sign;
 
-	if (write_telescope(dev, cmd, sizeof cmd) < 1) return RC_FAILED;
+	if (write_telescope(dev, (char *)cmd, sizeof cmd) < 1) return RC_FAILED;
 
 	if (read_telescope(dev, &res, sizeof res) < 0) return RC_FAILED;
 
@@ -679,7 +716,7 @@ int tc_set_time(char dev, time_t ttime, int tz, int dst) {
 	cmd[7] = (unsigned char)tz;
 	cmd[8] = (unsigned char)dst;
 
-	if (write_telescope(dev, cmd, sizeof cmd) < 1) return RC_FAILED;
+	if (write_telescope(dev, (char *)cmd, sizeof cmd) < 1) return RC_FAILED;
 
 	if (read_telescope(dev, &res, sizeof res) < 0) return RC_FAILED;
 
@@ -690,25 +727,25 @@ int tc_set_time(char dev, time_t ttime, int tz, int dst) {
 
 	/* If the mount has RTC set date/time to RTC too */
 	/* I only know CGE(5) and AdvancedVX(20) to have RTC */
-	if ((model = 5) || (model = 20)) {
+	if ((model == 5) || (model == 20)) {
 		gmtime_r(&ttime, &tms);
 
 		/* set year */
-		if (tc_pass_through_cmd(dev, 3, 178, 132,
+		if (tc_pass_through_cmd(dev, 3, 178u, 132u,
 		                       (unsigned char)((tms.tm_year + 1900) / 256),
 		                       (unsigned char)((tms.tm_year + 1900) % 256),
 		                       0, 0, &res)) {
 			return RC_FAILED;
 		}
 		/* set month and day */
-		if (tc_pass_through_cmd(dev, 3, 178, 131,
+		if (tc_pass_through_cmd(dev, 3, 178u, 131u,
 		                       (unsigned char)(tms.tm_mon + 1),
 		                       (unsigned char)tms.tm_mday,
 		                       0, 0, &res)) {
 			return RC_FAILED;
 		}
 		/* set time */
-		if (tc_pass_through_cmd(dev, 4, 178, 179,
+		if (tc_pass_through_cmd(dev, 4, 178u, 179u,
 		                       (unsigned char)tms.tm_hour,
 		                       (unsigned char)tms.tm_min,
 		                       (unsigned char)tms.tm_sec,
